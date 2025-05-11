@@ -288,6 +288,103 @@ public class PinyinEngine : UdonSharpBehaviour
 
     //匹配器
 
+    private string MapSingleUlpbToPinyin(string ulpb)
+    {
+        if (ulpb.Length == 0)
+        {
+            return "";
+        }
+        switch (ulpb)
+        {
+            case "aa": return "a";
+            case "oo": return "o";
+        }
+        var result = new StringBuilder();
+        switch (ulpb[0])
+        {
+            case 'u': result.Append("sh"); break;
+            case 'i': result.Append("ch"); break;
+            case 'v': result.Append("zh"); break;
+            default: result.Append(ulpb[0]); break;
+        }
+        if (ulpb.Length == 1)
+        {
+            return result.ToString();
+        }
+
+        var pending1 = "";
+        var pending2 = "";
+        switch (ulpb[1])
+        {
+            case 'q': result.Append("iu"); break;
+            case 'w': result.Append("ei"); break;
+            case 'e': result.Append("e"); break;
+            case 'r': result.Append("uan"); break;
+            case 't': result.Append("ue"); break;
+            case 'y': result.Append("un"); break;
+            case 'u': result.Append("u"); break;
+            case 'i': result.Append("i"); break;
+            case 'p': result.Append("ie"); break;
+            case 'a': result.Append("a"); break;
+            case 'd': result.Append("ai"); break;
+            case 'f': result.Append("en"); break;
+            case 'g': result.Append("eng"); break;
+            case 'h': result.Append("ang"); break;
+            case 'j': result.Append("an"); break;
+            case 'z': result.Append("ou"); break;
+            case 'c': result.Append("ao"); break;
+            case 'b': result.Append("in"); break;
+            case 'n': result.Append("iao"); break;
+            case 'm': result.Append("ian"); break;
+
+            case 'o': 
+                pending1 = "o";
+                pending2 = "uo";
+                break;
+            case 's': 
+                pending1 = "ong";
+                pending2 = "iong";
+                break;
+            case 'k': 
+                pending1 = "uai";
+                pending2 = "ing";
+                break;
+            case 'l': 
+                pending1 = "uang";
+                pending2 = "iang";
+                break;
+            case 'x': 
+                pending1 = "ua";
+                pending2 = "ia";
+                break;
+            case 'v': 
+                pending1 = "ui";
+                pending2 = "v";
+                break;
+        }
+        
+        if (pending1 == "") return result.ToString();
+        if (Array.IndexOf(pinyin_dict, result.ToString() + pending1) != -1)
+        {
+            result.Append(pending1);
+        }
+        else
+        {
+            result.Append(pending2);
+        }
+        return result.ToString();
+    }
+
+    private string MapUlpbToPinyin(string ulpb)
+    {
+        var ori = ulpb.Split(' ');
+        var result = new string[ori.Length];
+        for (int i = 0; i < ori.Length; i++)
+        {
+            result[i] = MapSingleUlpbToPinyin(ori[i]);
+        }
+        return string.Join(" ", result);
+    }
 
 private int _match_pinyin(string input_pinyin, string dict_pinyin)
 {
@@ -391,8 +488,9 @@ private int[] _find_fuzzy_matches(string inputPinyin, int startIndex, int endInd
     return result;
 }
 
-public string[] Match(string inputPinyin, int limit = 20,bool accurateMode = false)
+public string[] Match(string inputPinyin, int limit = 20,bool accurateMode = false, bool ulpb = false)
 {
+    Debug.Log($"Match {inputPinyin}");
     // 初始化候选数组
     string[] finalCandidates = new string[limit];
     double[] finalWeights = new double[limit];
@@ -402,6 +500,11 @@ public string[] Match(string inputPinyin, int limit = 20,bool accurateMode = fal
     string[] allCandidates = new string[max_candidates];
     double[] allWeights = new double[max_candidates];
     int totalCount = 0;
+
+    if (ulpb)
+    {
+        inputPinyin = MapUlpbToPinyin(inputPinyin);
+    }
 
     // 阶段1：精确匹配
     int[] exactMatches = _find_exact_matches(inputPinyin);
